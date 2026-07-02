@@ -54,7 +54,7 @@ jobs:
         echo "Local fallback versionCode is $LOCAL_CODE"
         
         # Query Firebase Realtime Database for the last successful build's version code
-        DB_VAL=$(curl -s "https://cloud-storage-f8ab3-default-rtdb.asia-southeast1.firebasedatabase.app/versionId.json" | tr -d '"')
+        DB_VAL=$(curl -s "https://collection-app-2007-default-rtdb.asia-southeast1.firebasedatabase.app/versionId.json" | tr -d '"')
         echo "Firebase DB versionId is: $DB_VAL"
         if [ "$DB_VAL" = "null" ]; then
           DB_VAL=""
@@ -138,9 +138,9 @@ jobs:
         # Update update_config.json
         curl -X PUT -H "Content-Type: application/json" \
           -d "{\"versionId\": $VERSION_CODE, \"apkFileId\": \"$APK_URL\", \"githubOwner\": \"$OWNER\", \"githubRepo\": \"$REPO\"}" \
-          "https://cloud-storage-f8ab3-default-rtdb.asia-southeast1.firebasedatabase.app/update_config.json"
+          "https://collection-app-2007-default-rtdb.asia-southeast1.firebasedatabase.app/update_config.json"
           
         # Update versionId.json
         curl -X PUT -H "Content-Type: application/json" \
           -d "$VERSION_CODE" \
-          "https://cloud-storage-f8ab3-default-rtdb.asia-southeast1.firebasedatabase.app/versionId.json"
+          "https://collection-app-2007-default-rtdb.asia-southeast1.firebasedatabase.app/versionId.json"
