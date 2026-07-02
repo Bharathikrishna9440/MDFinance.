@@ -33,54 +33,7 @@ object SmsService {
         }
         val formattedPhone = "+$cleanPhone"
 
-        try {
-            if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.SEND_SMS) 
-                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                var smsManager: android.telephony.SmsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    context.getSystemService(android.telephony.SmsManager::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    android.telephony.SmsManager.getDefault()
-                }
 
-                // Dual-SIM Subscription Selection
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
-                    try {
-                        val subscriptionManager = context.getSystemService(android.telephony.SubscriptionManager::class.java)
-                        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_PHONE_STATE) 
-                            == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                            val activeInfoList = subscriptionManager.activeSubscriptionInfoList
-                            if (activeInfoList != null && activeInfoList.size > 1) {
-                                val simIndex = if (simSelection.contains("SIM 1")) 0 else 1
-                                if (simIndex < activeInfoList.size) {
-                                    val subId = activeInfoList[simIndex].subscriptionId
-                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                                        smsManager = context.getSystemService(android.telephony.SmsManager::class.java)
-                                            .createForSubscriptionId(subId)
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        smsManager = android.telephony.SmsManager.getSmsManagerForSubscriptionId(subId)
-                                    }
-                                }
-                            }
-                        }
-                    } catch (ex: Exception) {
-                        android.util.Log.e("SmsService", "SubscriptionManager SMS error: ${ex.message}")
-                    }
-                }
-
-                val parts = smsManager.divideMessage(text)
-                if (parts.size > 1) {
-                    smsManager.sendMultipartTextMessage(formattedPhone, null, parts, null, null)
-                } else {
-                    smsManager.sendTextMessage(formattedPhone, null, text, null, null)
-                }
-                Toast.makeText(context, "Automatic SMS sent to $formattedPhone", Toast.LENGTH_SHORT).show()
-                return
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("SmsService", "Direct automatic SMS failed: ${e.message}")
-        }
 
         try {
             val intent = Intent(Intent.ACTION_SENDTO).apply {

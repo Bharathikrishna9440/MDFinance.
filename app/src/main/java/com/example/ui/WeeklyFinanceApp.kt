@@ -438,18 +438,18 @@ fun WeeklyFinanceApp(
             val hasCompletedSetup by viewModel.hasCompletedDeviceSetup.collectAsStateWithLifecycle()
 
             // ---- GLOBAL REAL-TIME APP VERSION / OTA UPDATE HANDLER ----
-            val updateStatus by com.example.util.AppUpdateManager.updateStatus.collectAsStateWithLifecycle()
+            val updateStatus by com.example.network.FirebaseUpdateManager.updateStatus.collectAsStateWithLifecycle()
             var showUpdateDialog by remember { mutableStateOf(true) }
 
             LaunchedEffect(updateStatus) {
-                if (updateStatus is com.example.util.UpdateStatus.NewVersionAvailable || 
-                    updateStatus is com.example.util.UpdateStatus.ReadyToInstall) {
+                if (updateStatus == com.example.network.UpdateStatus.UPDATE_AVAILABLE || 
+                    updateStatus == com.example.network.UpdateStatus.DOWNLOADED) {
                     showUpdateDialog = true
                 }
             }
 
-            if (showUpdateDialog && (updateStatus is com.example.util.UpdateStatus.NewVersionAvailable || 
-                                     updateStatus is com.example.util.UpdateStatus.ReadyToInstall)) {
+            if (showUpdateDialog && (updateStatus == com.example.network.UpdateStatus.UPDATE_AVAILABLE || 
+                                     updateStatus == com.example.network.UpdateStatus.DOWNLOADED)) {
                 AlertDialog(
                     onDismissRequest = { showUpdateDialog = false },
                     containerColor = Color.White,
@@ -491,14 +491,14 @@ fun WeeklyFinanceApp(
                                     modifier = Modifier.padding(12.dp).fillMaxWidth(),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    val latestCode = if (updateStatus is com.example.util.UpdateStatus.NewVersionAvailable) (updateStatus as com.example.util.UpdateStatus.NewVersionAvailable).versionId else -1
+                                    val latestCode = if (updateStatus == com.example.network.UpdateStatus.UPDATE_AVAILABLE) com.example.network.FirebaseUpdateManager.latestVersionCode.value else -1
                                     Text(
                                         text = "${translate("Latest Version", language)}: Build $latestCode",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = Color(0xFF1E293B)
                                     )
-                                    val statusText = if (updateStatus is com.example.util.UpdateStatus.ReadyToInstall) {
+                                    val statusText = if (updateStatus == com.example.network.UpdateStatus.DOWNLOADED) {
                                         translate("Status: Download completed! Ready to install.", language)
                                     } else {
                                         translate("Status: Automatic download in progress...", language)
@@ -507,7 +507,7 @@ fun WeeklyFinanceApp(
                                         text = statusText,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = if (updateStatus is com.example.util.UpdateStatus.ReadyToInstall) Color(0xFF059669) else Color(0xFFD97706)
+                                        color = if (updateStatus == com.example.network.UpdateStatus.DOWNLOADED) Color(0xFF059669) else Color(0xFFD97706)
                                     )
                                 }
                             }
@@ -518,16 +518,15 @@ fun WeeklyFinanceApp(
                             colors = ButtonDefaults.buttonColors(containerColor = colors.primaryAccent),
                             shape = RoundedCornerShape(8.dp),
                             onClick = {
-                                if (updateStatus is com.example.util.UpdateStatus.ReadyToInstall) {
-                                    val readyApk = (updateStatus as com.example.util.UpdateStatus.ReadyToInstall).apkFile
-                                    com.example.util.AppUpdateManager.installApk(context, readyApk)
+                                if (updateStatus == com.example.network.UpdateStatus.DOWNLOADED) {
+                                    com.example.network.FirebaseUpdateManager.triggerInstall(context, com.example.network.FirebaseUpdateManager.latestVersionCode.value)
                                 } else {
                                     Toast.makeText(context, "Download is in progress. Installation will launch automatically when finished.", Toast.LENGTH_LONG).show()
                                 }
                             }
                         ) {
                             Text(
-                                text = if (updateStatus is com.example.util.UpdateStatus.ReadyToInstall) translate("Install Now", language) else translate("Downloading...", language),
+                                text = if (updateStatus == com.example.network.UpdateStatus.DOWNLOADED) translate("Install Now", language) else translate("Downloading...", language),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )

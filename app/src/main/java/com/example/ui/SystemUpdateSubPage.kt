@@ -23,8 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.util.AppUpdateManager
-import com.example.util.UpdateStatus
+import com.example.network.FirebaseUpdateManager
+import com.example.network.UpdateStatus
 import androidx.compose.ui.platform.testTag
 
 @Composable
@@ -39,10 +39,12 @@ fun SystemUpdateSubPage(
     val pauseUpdatesEnabled by viewModel.pauseUpdatesEnabled.collectAsStateWithLifecycle()
 
     // Observe AppUpdateManager update states
-    val updateStatus by AppUpdateManager.updateStatus.collectAsStateWithLifecycle()
-    val latestVersionCode = if (updateStatus is UpdateStatus.NewVersionAvailable) (updateStatus as UpdateStatus.NewVersionAvailable).versionId else if (updateStatus is UpdateStatus.NoUpdateAvailable) (updateStatus as UpdateStatus.NoUpdateAvailable).cloudVersion else -1
-    val latestVersionName = "Build $latestVersionCode"
-    val updateError = if (updateStatus is UpdateStatus.Error) (updateStatus as UpdateStatus.Error).message else null
+    val updateStatus by FirebaseUpdateManager.updateStatus.collectAsStateWithLifecycle()
+    val latestVersionCodeState by FirebaseUpdateManager.latestVersionCode.collectAsStateWithLifecycle()
+    val updateErrorState by FirebaseUpdateManager.updateError.collectAsStateWithLifecycle()
+    val latestVersionCode = latestVersionCodeState
+    val latestVersionName = "Build $latestVersionCode" 
+    val updateError = updateErrorState
 
     val currentVersionCode = try {
         val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -173,8 +175,27 @@ fun SystemUpdateSubPage(
                         .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
                         .padding(14.dp)
                 ) {
-                    when (val status = updateStatus) {
-                        is UpdateStatus.Checking -> {
+                    when (updateStatus) {
+                        UpdateStatus.IDLE -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = translate("Standby / Idle", language),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.DarkGray
+                                )
+                            }
+                        }
+                        UpdateStatus.CHECKING -> {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -192,25 +213,7 @@ fun SystemUpdateSubPage(
                                 )
                             }
                         }
-                        is UpdateStatus.SecuringData -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                CircularProgressIndicator(
-                                    color = Color(0xFFF59E0B),
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Text(
-                                    text = translate("Securing Database & Settings...", language),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFD97706)
-                                )
-                            }
-                        }
-                        is UpdateStatus.Downloading -> {
+                        UpdateStatus.DOWNLOADING -> {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -228,7 +231,7 @@ fun SystemUpdateSubPage(
                                 )
                             }
                         }
-                        is UpdateStatus.ReadyToInstall -> {
+                        UpdateStatus.DOWNLOADED -> {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -248,7 +251,7 @@ fun SystemUpdateSubPage(
                                     )
                                 }
                                 Button(
-                                    onClick = { AppUpdateManager.installApk(context, status.apkFile) },
+                                    onClick = { FirebaseUpdateManager.triggerInstall(context, latestVersionCode) },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth()
@@ -261,7 +264,7 @@ fun SystemUpdateSubPage(
                                 }
                             }
                         }
-                        is UpdateStatus.NewVersionAvailable -> {
+                        UpdateStatus.UPDATE_AVAILABLE -> {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -274,15 +277,15 @@ fun SystemUpdateSubPage(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = translate("New version available: Build $latestVersionCode", language),
+                                        text = translate("New Version v$latestVersionCode is available!", language),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1D4ED8)
+                                        color = Color(0xFF2563EB)
                                     )
                                 }
                             }
                         }
-                        is UpdateStatus.NoUpdateAvailable -> {
+                        UpdateStatus.UP_TO_DATE -> {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -294,47 +297,39 @@ fun SystemUpdateSubPage(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = translate("Your application is up to date!", language),
+                                    text = translate("App is fully up-to-date (v$latestVersionCode)", language),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF047857)
                                 )
                             }
                         }
-                        is UpdateStatus.Error -> {
+                        UpdateStatus.FAILED -> {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = translate("Update query or download failed.", language),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.Red
-                                )
-                                if (!updateError.isNullOrEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = Color.Red,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                     Text(
-                                        text = updateError ?: "",
-                                        fontSize = 11.sp,
-                                        color = Color.Gray
+                                        text = translate("Error checking/downloading updates.", language),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.Red
                                     )
                                 }
-                            }
-                        }
-                        else -> {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = translate("Standby / Idle", language),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.DarkGray
-                                )
+                                if (!updateError.isNullOrEmpty()) {
+                                    Text(
+                                        text = updateError,
+                                        fontSize = 11.sp,
+                                        color = Color.Red
+                                    )
+                                }
                             }
                         }
                     }
@@ -367,7 +362,7 @@ fun SystemUpdateSubPage(
                 Button(
                     onClick = {
                         Toast.makeText(context, "Contacting Firebase Realtime Database...", Toast.LENGTH_SHORT).show()
-                        AppUpdateManager.triggerCheckForUpdates(context, manualCheck = true)
+                        FirebaseUpdateManager.checkForCloudUpdates(context, manualCheck = true)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = appColors.primaryAccent),
                     shape = RoundedCornerShape(8.dp),

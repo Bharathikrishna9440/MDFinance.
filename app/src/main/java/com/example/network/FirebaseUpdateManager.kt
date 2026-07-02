@@ -78,18 +78,16 @@ object FirebaseUpdateManager {
             1L
         }
 
-        val runningFirebaseVersion = prefs.getLong("running_firebase_version", currentVersionCode)
 
         configRef.get().addOnSuccessListener { snapshot ->
             val latestCode = snapshot.child("versionId").getValue(Long::class.java) ?: currentVersionCode
             val latestName = snapshot.child("versionName").getValue(String::class.java) ?: "1.0.$latestCode"
             val apkDownloadUrl = snapshot.child("apkFileId").getValue(String::class.java) ?: ""
-
             _latestVersionCode.value = latestCode
             _latestVersionName.value = latestName
-
-            if (latestCode > runningFirebaseVersion && apkDownloadUrl.isNotEmpty()) {
-                Log.i(TAG, "New Update Detected! v$latestCode > v$runningFirebaseVersion")
+            
+            if (latestCode > currentVersionCode && apkDownloadUrl.isNotEmpty()) {
+                Log.i(TAG, "New Update Detected! v$latestCode > v$currentVersionCode")
                 
                 // Check if we have already downloaded this specific update file
                 val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "mdfinance-update-$latestCode.apk")
