@@ -98,7 +98,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private suspend fun processTransaction(amount: Double, txnId: String, senderName: String) {
-        val db = AppDatabase.getDatabase(applicationContext)
+        val db = com.example.data.DatabaseProvider.getDatabase(applicationContext)
         val repo = FinanceRepository(db.collectionDao())
 
         // 1. Check duplicate checks

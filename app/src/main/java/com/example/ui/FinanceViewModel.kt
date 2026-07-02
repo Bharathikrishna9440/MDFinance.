@@ -124,7 +124,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     val bypassLogin = false // Set to false to re-enable login page
 
-    private val db = AppDatabase.getDatabase(application)
+    private val db = com.example.data.DatabaseProvider.getDatabase(application)
     private val repository = FinanceRepository(db.collectionDao())
     private val prefs = application.getSharedPreferences("weekly_finance_prefs", Context.MODE_PRIVATE)
 
@@ -4336,7 +4336,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 _isExportImportLoading.value = true
-                val db = com.example.data.AppDatabase.getDatabase(context)
+                val db = com.example.data.DatabaseProvider.getDatabase(context)
                 db.withTransaction {
                     db.collectionDao().deleteAllPayments()
                     db.collectionDao().deleteAllLoanCycles()

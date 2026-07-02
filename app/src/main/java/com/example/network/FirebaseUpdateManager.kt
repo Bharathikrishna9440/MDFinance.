@@ -104,7 +104,7 @@ object FirebaseUpdateManager {
                     val coroutineScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
                     coroutineScope.launch {
                         try {
-                            val db = com.example.data.AppDatabase.getDatabase(context)
+                            val db = com.example.data.DatabaseProvider.getDatabase(context)
                             val customersList = db.collectionDao().getAllCustomersOnce()
                             val loanCyclesList = db.collectionDao().getAllLoanCyclesOnce()
                             val paymentsList = db.collectionDao().getAllPaymentsOnce()

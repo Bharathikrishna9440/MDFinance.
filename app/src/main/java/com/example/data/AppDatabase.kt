@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [Customer::class, LoanCycle::class, WeeklyPayment::class, EditLog::class, CashBalanceLog::class],
     version = 13,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun collectionDao(): CollectionDao
@@ -23,24 +23,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         @Volatile
         private var IN_MEMORY_INSTANCE: AppDatabase? = null
-
-        val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // Placeholder migrate
-            }
-        }
-
-        val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // Placeholder migrate
-            }
-        }
-
-        val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                // Placeholder migrate
-            }
-        }
 
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -116,63 +98,55 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        fun getDatabase(context: Context): AppDatabase {
-            val prefs = context.getSharedPreferences("weekly_finance_prefs", Context.MODE_PRIVATE)
-            val isDemo = prefs.getBoolean("is_demo_mode", false)
-            val currentRole = prefs.getString("current_role", "USER") ?: "USER"
-            
-            val isDemoMode = isDemo
-            val isReadOnlyUser = currentRole == "USER"
 
-            val decodedByteArray = android.util.Base64.decode("TURiQDI0MDgwNw==", android.util.Base64.DEFAULT)
-            val dbPasswordBytes = if (com.example.BuildConfig.DB_PASSWORD.isNotBlank() && com.example.BuildConfig.DB_PASSWORD != "PLACEHOLDER") {
-                com.example.BuildConfig.DB_PASSWORD.toByteArray(Charsets.UTF_8)
-            } else {
-                decodedByteArray
-            }
+        fun getDatabase(
+            context: Context, 
+            isDemoMode: Boolean, 
+            isReadOnlyUser: Boolean,
+            dbPasswordBytes: ByteArray
+        ): AppDatabase {
+            
             val factory = SupportFactory(dbPasswordBytes)
 
-            return when {
-                isDemoMode -> {
-                    IN_MEMORY_INSTANCE ?: synchronized(this) {
-                        IN_MEMORY_INSTANCE ?: Room.inMemoryDatabaseBuilder(
-                            context.applicationContext,
-                            AppDatabase::class.java
-                        )
-                        .openHelperFactory(factory)
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
-                        .fallbackToDestructiveMigration(true)
-                        .build().also { IN_MEMORY_INSTANCE = it }
-                    }
-                }
-                isReadOnlyUser -> {
-                    INSTANCE ?: synchronized(this) {
-                        INSTANCE ?: Room.databaseBuilder(
-                            context.applicationContext,
-                            AppDatabase::class.java,
-                            "weekly_finance_user_cache_db"
-                        )
-                        .openHelperFactory(factory)
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
-                        .fallbackToDestructiveMigration(true)
-                        .build().also { INSTANCE = it }
-                    }
-                }
-                else -> {
-                    INSTANCE ?: synchronized(this) {
-                        INSTANCE ?: Room.databaseBuilder(
-                            context.applicationContext,
-                            AppDatabase::class.java,
-                            "weekly_finance_collection_db"
-                        )
-                        .openHelperFactory(factory)
-                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
-                        .fallbackToDestructiveMigration(true)
-                        .build().also { INSTANCE = it }
-                    }
+            if (isDemoMode) {
+                return IN_MEMORY_INSTANCE ?: synchronized(this) {
+                    Room.inMemoryDatabaseBuilder(
+                        context.applicationContext,
+                        AppDatabase::class.java
+                    )
+                    .openHelperFactory(factory)
+                    .fallbackToDestructiveMigration(true) 
+                    .build().also { IN_MEMORY_INSTANCE = it }
                 }
             }
+
+            val dbName = if (isReadOnlyUser) "weekly_finance_user_cache_db" else "weekly_finance_collection_db"
+            val obsoleteDbName = if (isReadOnlyUser) "weekly_finance_collection_db" else "weekly_finance_user_cache_db"
+            
+            // Delete stale obsolete database to prevent orphaned sensitive data
+            try {
+                context.applicationContext.deleteDatabase(obsoleteDbName)
+            } catch (e: Exception) {
+                // Ignore if it doesn't exist
+            }
+
+            return INSTANCE ?: synchronized(this) {
+                Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    dbName
+                )
+                .openHelperFactory(factory)
+                .addMigrations(
+                    MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, 
+                    MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, 
+                    MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
+                )
+                .fallbackToDestructiveMigration(true)
+                .build().also { INSTANCE = it }
+            }
         }
+        
 
         fun resetDatabaseInstances() {
             synchronized(this) {
