@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
@@ -334,10 +335,7 @@ fun SystemUpdateSubPage(
                         }
                     }
                 }
-            }
-        }
-
-        // Manual Check Button Card
+// Manual Check Button Card
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(12.dp),
@@ -382,10 +380,33 @@ fun SystemUpdateSubPage(
                         color = Color.White
                     )
                 }
+                
+                Button(
+                    onClick = {
+                        FirebaseUpdateManager.deleteDownloadedUpdate(context)
+                        FirebaseUpdateManager.checkForCloudUpdates(context, manualCheck = true)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = translate("DELETE DOWNLOAD & RE-CHECK", language),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color.White
+                    )
+                }
             }
         }
-
-        // Settings Toggles Card
+// Settings Toggles Card
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(12.dp),
@@ -498,7 +519,8 @@ fun SystemUpdateSubPage(
                         modifier = Modifier.testTag("pause_updates_enabled_switch")
                     )
                 }
-            }
-        }
-    }
+}
+}
+            }}
+}
 }

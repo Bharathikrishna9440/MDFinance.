@@ -48,6 +48,12 @@ object FirebaseUpdateManager {
 
     fun checkForCloudUpdates(context: Context, manualCheck: Boolean = false) {
         val prefs = context.getSharedPreferences("weekly_finance_prefs", Context.MODE_PRIVATE)
+        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
+        if (!isLoggedIn) {
+            Log.i(TAG, "User is not logged in. Skipping update check.")
+            _updateStatus.value = UpdateStatus.IDLE
+            return
+        }
         val pauseUpdates = prefs.getBoolean("pause_updates_enabled", false)
         if (pauseUpdates && !manualCheck) {
             Log.i(TAG, "Background update check paused by preference.")
@@ -255,5 +261,28 @@ object FirebaseUpdateManager {
         } else {
             Toast.makeText(context, "Update APK file not found on device.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun deleteDownloadedUpdate(context: Context) {
+        val prefs = context.getSharedPreferences("weekly_finance_prefs", Context.MODE_PRIVATE)
+        val downloadedCode = prefs.getLong("downloaded_version_code", -1L)
+        if (downloadedCode != -1L) {
+            val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "mdfinance-update-$downloadedCode.apk")
+            if (file.exists()) {
+                file.delete()
+            }
+            prefs.edit().remove("downloaded_version_code").apply()
+        }
+        
+        // Also clear any other old apk files
+        val dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        dir?.listFiles()?.forEach { 
+            if (it.name.startsWith("mdfinance-update-") && it.name.endsWith(".apk")) {
+                it.delete()
+            }
+        }
+        
+        _updateStatus.value = UpdateStatus.IDLE
+        Toast.makeText(context, "Downloaded update deleted.", Toast.LENGTH_SHORT).show()
     }
 }
