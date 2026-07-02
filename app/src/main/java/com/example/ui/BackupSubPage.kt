@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,7 +37,7 @@ fun BackupSubPage(
     currentUserRole: String = "ADMIN"
 ) {
     var showDeleteAllDialog by remember { mutableStateOf(false) }
-    var groupToImportInto by remember { mutableStateOf<String?>(null) }
+    var groupToImportInto by rememberSaveable { mutableStateOf<String?>(null) }
 
     val msgAllDataDeleted = translate("All data successfully deleted!", language)
     val msgDeleteFailed = translate("Delete failed:", language)

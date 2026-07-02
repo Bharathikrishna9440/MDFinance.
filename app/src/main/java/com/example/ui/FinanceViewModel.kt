@@ -4300,7 +4300,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             onError("Import is disabled in Offline Tester Mode.")
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             _isExportImportLoading.value = true
             try {
                 val uri = android.net.Uri.parse(uriString)
@@ -4310,22 +4310,31 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val bytes = inputStream.readBytes()
                 val stringContent = String(bytes, java.nio.charset.StandardCharsets.UTF_8).trim()
 
+                val activeDb = com.example.data.DatabaseProvider.getDatabase(context)
+
                 val success = com.example.util.CsvBackupHelper.importCsvIntoDay(
                     context = context,
                     csvText = stringContent,
                     dayGroup = groupName,
-                    db = db
+                    db = activeDb
                 )
 
                 if (success) {
                     triggerDatabaseRescanAndRepair()
-                    onSuccess()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        onSuccess()
+                    }
                 } else {
-                    onError("Failed parsing CSV data. Please verify column structure matches instructions exactly.")
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        onError("Failed parsing CSV data. Please verify column structure matches instructions exactly.")
+                    }
                 }
             } catch (e: java.lang.Exception) {
                 e.printStackTrace()
-                onError(e.message ?: "Unknown backup restoration error")
+                val errorMsg = e.message ?: "Unknown backup restoration error"
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    onError(errorMsg)
+                }
             } finally {
                 _isExportImportLoading.value = false
             }
