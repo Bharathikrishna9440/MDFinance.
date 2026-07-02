@@ -33,8 +33,14 @@ jobs:
       run: chmod +x gradlew
 
     - name: Decode Keystore
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-upload-key.jks
+        if [ -n "$KEYSTORE_BASE64" ]; then
+          echo "$KEYSTORE_BASE64" | base64 -d > my-upload-key.jks
+        else
+          echo "KEYSTORE_BASE64 is empty, using checked-in my-upload-key.jks"
+        fi
 
     - name: Get Version Info
       id: get_version
