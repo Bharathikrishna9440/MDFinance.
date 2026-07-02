@@ -34,7 +34,7 @@ jobs:
 
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > debug.keystore
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-upload-key.jks
 
     - name: Get Version Info
       id: get_version
